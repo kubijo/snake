@@ -1,0 +1,58 @@
+{
+  "name": "snake",
+  "version": "0.0.1",
+  "main": "index.html ",
+  "repository": "git@github.com:kubijo/snake.git",
+  "author": "Josef Kubíček <kubijo@gmail.com>",
+  "license": "wtfpl",
+  "private": true,
+  "dependencies": {
+    "d3-scale": "^2.2.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.2.3",
+    "@babel/core": "^7.3.3",
+    "@babel/preset-env": "^7.3.1",
+    "@babel/preset-flow": "^7.0.0",
+    "@braiins/eslint-config": "^0.2.3",
+    "babel-eslint": "^10.0.1",
+    "babel-loader": "^8.0.5",
+    "clean-webpack-plugin": "^1.0.1",
+    "eslint": "^5.9.0",
+    "eslint-config-prettier": "^3.3.0",
+    "eslint-plugin-flowtype": "^3.2.0",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-jest": "^22.1.0",
+    "eslint-plugin-jsx-a11y": "^6.1.2",
+    "eslint-plugin-prettier": "^3.0.1",
+    "eslint-plugin-react": "^7.11.1",
+    "eslint-restricted-globals": "^0.2.0",
+    "flow-bin": "^0.93.0",
+    "flow-typed": "^2.5.1",
+    "html-webpack-plugin": "^3.2.0",
+    "husky": "^1.3.1",
+    "lint-staged": "^8.1.4",
+    "prettier": "1.16.4",
+    "webpack": "^4.29.5",
+    "webpack-cli": "^3.2.3"
+  },
+  "scripts": {
+    "flow:install": "flow-typed install --overwrite",
+    "lint": "eslint src",
+    "pretest": "flow",
+    "test": "jest --coverage",
+    "build": "webpack --progress",
+    "watch": "webpack --progress --watch"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --config .prettierrc.js --write",
+      "git add"
+    ]
+  }
+}

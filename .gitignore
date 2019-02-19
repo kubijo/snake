@@ -1,0 +1,6 @@
+*.log
+*.old
+
+build/
+node_modules/
+.idea/
