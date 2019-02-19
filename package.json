@@ -7,16 +7,20 @@
   "license": "wtfpl",
   "private": true,
   "dependencies": {
-    "d3-scale": "^2.2.2"
+    "d3-scale": "^2.2.2",
+    "invariant": "^2.2.4"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.3.3",
+    "@babel/plugin-proposal-class-properties": "^7.3.3",
+    "@babel/plugin-proposal-object-rest-spread": "^7.3.2",
     "@babel/preset-env": "^7.3.1",
     "@babel/preset-flow": "^7.0.0",
     "@braiins/eslint-config": "^0.2.3",
     "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.5",
+    "babel-preset-flow": "^6.23.0",
     "clean-webpack-plugin": "^1.0.1",
     "eslint": "^5.9.0",
     "eslint-config-prettier": "^3.3.0",
@@ -34,7 +38,8 @@
     "lint-staged": "^8.1.4",
     "prettier": "1.16.4",
     "webpack": "^4.29.5",
-    "webpack-cli": "^3.2.3"
+    "webpack-cli": "^3.2.3",
+    "webpack-dev-server": "^3.1.14"
   },
   "scripts": {
     "flow:install": "flow-typed install --overwrite",
@@ -42,7 +47,8 @@
     "pretest": "flow",
     "test": "jest --coverage",
     "build": "webpack --progress",
-    "watch": "webpack --progress --watch"
+    "watch": "webpack --progress --watch",
+    "start:dev": "webpack-dev-server"
   },
   "husky": {
     "hooks": {

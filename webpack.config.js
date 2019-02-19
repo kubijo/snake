@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
+const webpack = require('webpack');
 
 module.exports = {
     mode: 'development',
@@ -26,5 +27,14 @@ module.exports = {
             title: 'Snake',
             showErrors: true,
         }),
+        new webpack.HotModuleReplacementPlugin(),
     ],
+
+    // Dev server
+    devServer: {
+        contentBase: path.join(__dirname, 'build'),
+        compress: true,
+        port: 9000,
+        hot: true,
+    },
 };
