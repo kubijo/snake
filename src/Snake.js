@@ -9,10 +9,11 @@ import {
     NEGATIVE,
     type X,
     type Y,
-    type Length,
     type Point,
+    type GridSize,
     type Direction,
     type DirectionRelative,
+    type SnakeInterface,
 } from './constants';
 import { clamp } from './lib';
 
@@ -36,32 +37,24 @@ const relative2absolute: { [current: Direction]: { [DirectionRelative]: Directio
     },
 };
 
-function getInitialPath(offset?: Point, gridSize: Length[]): Point[] {
+function getInitialPath(offset?: ?Point, gridSize: GridSize): Point[] {
     // Make sure that numbers are in sensible range and floored
     const off = (offset || [0, 0]).map((n, i) => Math.floor(clamp(n, 0, gridSize[i] * 0.7)));
 
     // Shift the default value
     return [[0, 0], [1, 0], [2, 0], [3, 0]].map(p => [p[0] + off[0], p[1] + off[1]]);
 }
-function move(head: Point, direction: Direction): Point {
-    const [x, y] = head;
-    const newHead: Point = [x, y];
 
-    if (direction === UP) newHead[1] -= 1;
-    if (direction === DOWN) newHead[1] += 1;
-    if (direction === LEFT) newHead[0] -= 1;
-    if (direction === RIGHT) newHead[0] += 1;
-
-    return newHead;
-}
-
-export default class Snake {
+export default class Snake implements SnakeInterface {
     gridSize: [X, Y];
-    constructor(cellCountX: Length, cellCountY: Length, offset?: Point) {
-        this.resize(cellCountX, cellCountY, offset);
+    wrap: boolean = false;
+
+    constructor(gridSize: GridSize, offset?: ?Point = this.gridSize, wrap?: boolean = this.wrap) {
+        this.init(gridSize, offset, wrap);
     }
-    resize(cellCountX: Length, cellCountY: Length, offset?: Point): void {
-        this.gridSize = [cellCountX, cellCountY];
+    init(gridSize: GridSize, offset?: ?Point = this.gridSize, wrap?: boolean = this.wrap): void {
+        this.wrap = !!wrap;
+        this.gridSize = gridSize;
         this.path = getInitialPath(offset, this.gridSize);
         this.checkCollition(this.path, this.head);
     }
@@ -73,18 +66,39 @@ export default class Snake {
     // Do not trim the path tail until this is 0
     eatBuffer: number = 0;
 
-    turn(dir: Direction | DirectionRelative): mixed {
+    $wrapHead = (n: number, i: number): number => {
+        const ref = this.gridSize[i];
+        if (n > ref) return 0;
+        if (n < 0) return ref;
+        return n;
+    };
+    $moveHead(head: Point, direction: Direction): Point {
+        const [x, y] = head;
+        let newHead: Point = [x, y];
+
+        if (direction === UP) newHead[1] -= 1;
+        if (direction === DOWN) newHead[1] += 1;
+        if (direction === LEFT) newHead[0] -= 1;
+        if (direction === RIGHT) newHead[0] += 1;
+
+        // $FlowIgnore
+        if (this.wrap) newHead = newHead.map(this.$wrapHead);
+
+        return newHead;
+    }
+
+    turn(dir: Direction | DirectionRelative): void {
         const d = dir === NEGATIVE || dir === POSITIVE ? relative2absolute[this.direction][dir] : dir;
         const [neck, head] = this.path.slice(-2);
 
         // Abort when trying to dow 180° in place
-        if (String(move(head, d)) === String(neck)) return console.info('Stopped an attempt at 180° turn');
+        if (String(this.$moveHead(head, d)) === String(neck)) return console.info('Stopped an attempt at 180° turn');
 
         this.direction = d;
     }
     step(): void {
         const { path } = this;
-        const newHead: Point = move(this.head, this.direction);
+        const newHead: Point = this.$moveHead(this.head, this.direction);
 
         let lead;
         if (this.eatBuffer > 0) {
@@ -96,6 +110,7 @@ export default class Snake {
 
         if (!this.checkCollition(this.path, newHead)) this.path = [...lead, newHead];
     }
+
     eat(size?: number = 1): void {
         this.eatBuffer += clamp(size, 0, Infinity);
     }
@@ -104,7 +119,7 @@ export default class Snake {
         const [x, y] = head;
 
         const self = path.length > 4 && this.liesOnPoint([x, y]);
-        const walls = x < 0 || x >= width || y < 0 || y >= height;
+        const walls = this.wrap ? false : x < 0 || x >= width || y < 0 || y >= height;
 
         this.isDead = self || walls;
         return this.isDead;

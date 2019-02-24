@@ -1,6 +1,7 @@
 // @flow
 
 import { defaultsDeep, random } from 'lodash';
+import * as config from './config';
 import {
     UP,
     DOWN,
@@ -12,56 +13,24 @@ import {
     type Box,
     type ClickHandler,
     type Fruit,
-    type Length,
+    type GridSize,
+    type Dimensions,
     type MenuEntry,
     type Direction,
     type DirectionRelative,
+    type SnakeInterface,
 } from './constants';
 
-import { clamp, clampGrid, info } from './lib';
+import { /* clamp, clampGrid, */ info } from './lib';
 import Snake from './Snake';
 
-const c = {
-    color: {
-        bg: 'green',
-        fg: 'yellow',
-        dead: 'red',
-    },
-    interval: {
-        foodDrop: 3e3,
-    },
-    size: {
-        cellContentScale: 0.6,
-        cell: 32,
-    },
-    menu: {
-        shadeBgColor: 'rgba(0, 0, 0, 0.75)',
-        bgColor: 'rgba(0, 0, 0, 0.75)',
-        padding: 10,
-
-        itemHeight: 30,
-        itemPaddingV: 8,
-        itemPaddingH: 25,
-
-        itemFont: '20px sans',
-        color: 'rgba(255, 255, 255, 0.7)',
-        itemBgColor: 'rgba(0, 0, 0, 0.7)',
-        itemBgColorActive: 'rgba(0, 100, 255, 0.85)',
-        letterWidthMultiplier: 20,
-    },
-    debug: {
-        enabled: false,
-        isDemo: false,
-        demoInterval: 2e2,
-    },
-};
-
-type State = {|
+export type State = {|
     fps: number,
+    wrap: boolean,
 
-    outerSize: [number, number],
-    innerSize: [number, number],
-    gridSize: [Length, Length],
+    outerSize: Dimensions,
+    innerSize: Dimensions,
+    gridSize: GridSize,
 
     fruits: $ObjMap<typeof renderFruit, () => Fruit>,
 
@@ -72,11 +41,12 @@ type State = {|
     activeMenuItem: number,
 |};
 const getInitialState = (): State => ({
-    fps: 5,
+    fps: 10,
+    wrap: true,
 
     outerSize: [100, 100],
     innerSize: [100, 100],
-    gridSize: [100 / c.size.cell, 100 / c.size.cell],
+    gridSize: [100 / config.size.cell, 100 / config.size.cell],
 
     fruits: {},
 
@@ -92,7 +62,7 @@ export default class Game {
     canvas: HTMLCanvasElement;
     ctx: CanvasRenderingContext2D;
 
-    snake: Snake;
+    snake: SnakeInterface;
     state: State;
 
     constructor(mount: HTMLElement) {
@@ -118,8 +88,8 @@ export default class Game {
             });
         });
 
-        this.snake = new Snake(0, 0);
         this.state = getInitialState();
+        this.snake = new Snake([0, 0], null, this.state.wrap);
 
         // Create canvas and get it's context
         this.canvas = document.createElement('canvas');
@@ -135,11 +105,11 @@ export default class Game {
         const outerWidth = window.innerWidth;
         const outerHeight = window.innerHeight;
 
-        const innerWidth = outerWidth - (outerWidth % c.size.cell);
-        const innerHeight = outerHeight - (outerHeight % c.size.cell);
+        const innerWidth = outerWidth - (outerWidth % config.size.cell);
+        const innerHeight = outerHeight - (outerHeight % config.size.cell);
 
-        const gridSizeX = innerWidth / c.size.cell;
-        const gridSizeY = innerHeight / c.size.cell;
+        const gridSizeX = innerWidth / config.size.cell;
+        const gridSizeY = innerHeight / config.size.cell;
 
         this.state.outerSize = [outerWidth, outerHeight];
         this.state.innerSize = [innerWidth, innerHeight];
@@ -147,7 +117,7 @@ export default class Game {
 
         this.canvas.width = innerWidth;
         this.canvas.height = innerHeight;
-        this.snake.resize(gridSizeX, gridSizeY, [gridSizeX / 3, gridSizeY / 3]);
+        this.snake.init(this.state.gridSize, [gridSizeX / 3, gridSizeY / 3], this.state.wrap);
         this.render();
     };
     handleKeypress = (e: KeyboardEvent): void => {
@@ -192,7 +162,7 @@ export default class Game {
     };
     $$snakeTurnImpl(direction: Direction | DirectionRelative): void {
         this.state.didMove = true;
-        const { debug } = c;
+        const { debug } = config;
         this.snake.turn(direction);
         if (debug.enabled && !debug.isDemo) this.renderTickImpl();
     }
@@ -200,7 +170,7 @@ export default class Game {
     pointHandlers: Map<ClickHandler, Box> = new Map();
     handleClick = (e: MouseEvent) => {
         if (e.target !== this.canvas) return;
-        const con = info('handleClick', true);
+        const con = info('handleClick');
 
         const el = this.canvas;
         const x = e.pageX - el.offsetLeft;
@@ -208,7 +178,7 @@ export default class Game {
 
         if (!this.state.inMenu) {
             // FIXME: Tottaly broken and fucked-up…
-            // const cell = c.size.cell;
+            // const cell = config.size.cell;
             // const [snakeGridX, snakeGridY] = this.snake.head;
             // const [gridX, gridY] = [x, y].map(n => clampGrid(n, cell) / cell);
             //
@@ -301,7 +271,7 @@ export default class Game {
             const v: Fruit = fruits[k];
 
             // Hide timed-out fruits
-            if (!c.debug.enabled && v.timestamp && now > v.timestamp + v.timeout * 1e3) {
+            if (!config.debug.enabled && v.timestamp && now > v.timestamp + v.timeout * 1e3) {
                 v.position = null;
                 v.timestamp = null;
                 return true;
@@ -336,13 +306,13 @@ export default class Game {
     fruitDroppingIntervalID = null;
     start = (): void => {
         const con = info('start');
-        const { debug, interval } = c;
+        const { debug, demo, interval } = config;
         this.fruitDroppingIntervalID = setInterval(this.handleFruitDrop, interval.foodDrop);
 
         if (debug.enabled) {
             this.render();
         } else {
-            if (debug.isDemo) this.demo();
+            if (demo.enabled) this.demo();
             this.renderTick4Timer();
         }
 
@@ -379,11 +349,25 @@ export default class Game {
         this.render();
     };
 
-    demoIntervalID: any;
+    demoTickIntervalID: any;
     demo = (): void => {
-        this.demoIntervalID = setInterval(() => this.snake.turn(POSITIVE), c.debug.demoInterval);
+        const { snake } = this;
+        const { demo } = config;
+
+        if (
+            demo.state &&
+            Object.prototype.toString.call(demo.state) === '[object Object]' &&
+            Object.keys(demo.state).length
+        )
+            Object.assign(this.state, demo.state);
+
+        const tick = () => {
+            const dir = demo.turn(snake);
+            if (dir) snake.turn(dir);
+        };
+        clearTimeout(this.demoTickIntervalID);
+        this.demoTickIntervalID = setInterval(tick, demo.interval);
     };
-    stopDemo = (): void => clearInterval(this.demoIntervalID);
 
     i: number = 0;
     lastTick: number;
@@ -423,8 +407,8 @@ export default class Game {
 
     $renderHead(x: number, y: number, cx: number, cy: number): void {
         const { ctx, snake } = this;
-        const half = c.size.cell / 2;
-        const r = half * c.size.cellContentScale;
+        const half = config.size.cell / 2;
+        const r = half * config.size.cellContentScale;
 
         const angleMod: number = {
             [UP]: 1.5,
@@ -442,7 +426,7 @@ export default class Game {
         ctx.fill();
 
         ctx.fillStyle = 'blue';
-        const eyeOffset = [c.size.cell * 0.05, c.size.cell * 0.2];
+        const eyeOffset = [config.size.cell * 0.05, config.size.cell * 0.2];
         const eyePosition = {
             [LEFT]: [cx + eyeOffset[0], cy - eyeOffset[1]],
             [RIGHT]: [cx + eyeOffset[0], cy - eyeOffset[1]],
@@ -450,13 +434,13 @@ export default class Game {
             [DOWN]: [cx + eyeOffset[1], cy - eyeOffset[0]],
         }[snake.direction] || [0, 0];
         ctx.beginPath();
-        ctx.arc(...eyePosition, c.size.cell * 0.06, 0, 2 * Math.PI, false);
+        ctx.arc(...eyePosition, config.size.cell * 0.06, 0, 2 * Math.PI, false);
         ctx.fill();
     }
     $renderTail(x: number, y: number, cx: number, cy: number) {
         const { ctx, snake } = this;
-        const tSize = c.size.cell * c.size.cellContentScale;
-        const tOffs = c.size.cell - tSize;
+        const tSize = config.size.cell * config.size.cellContentScale;
+        const tOffs = config.size.cell - tSize;
 
         /**
          *         up
@@ -528,13 +512,13 @@ export default class Game {
         const triggerPoint = 2;
         if (bodyIndex <= triggerPoint) tailScalingFactor -= (triggerPoint - bodyIndex) * 0.1;
 
-        const d = c.size.cell * c.size.cellContentScale * tailScalingFactor;
+        const d = config.size.cell * config.size.cellContentScale * tailScalingFactor;
         ctx.arc(cx, cy, d * 0.5, 0, 2 * Math.PI);
         ctx.fill();
     }
     renderSnake(): void {
         const { ctx, snake } = this;
-        const { size, color } = c;
+        const { size, color } = config;
 
         ctx.fillStyle = !snake.isDead ? color.fg : color.dead;
         const half = size.cell / 2;
@@ -561,7 +545,7 @@ export default class Game {
 
     renderOverlay(): void {
         const { ctx } = this;
-        const { menu } = c;
+        const { menu } = config;
         const {
             innerSize: [width, height],
             activeMenuItem,
@@ -614,7 +598,7 @@ export default class Game {
         });
     }
     renderFood(): void {
-        const { size } = c;
+        const { size } = config;
         const { ctx } = this;
         const { fruits } = this.state;
 
@@ -632,7 +616,7 @@ export default class Game {
         });
     }
     renderGrid(): void {
-        const { size } = c;
+        const { size, debug } = config;
         const { ctx } = this;
         const {
             innerSize: [width, height],
@@ -649,7 +633,7 @@ export default class Game {
             const x = ox * size.cell;
             ctx.moveTo(x, 0);
             ctx.lineTo(x, height);
-            if (c.debug.enabled) {
+            if (debug.enabled) {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
                 ctx.fillText(String(ox - 1), x - size.cell / 2, 0);
@@ -659,7 +643,7 @@ export default class Game {
             const y = oy * size.cell;
             ctx.moveTo(0, y);
             ctx.lineTo(width, y);
-            if (c.debug.enabled) {
+            if (debug.enabled) {
                 ctx.textAlign = 'left';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(String(oy - 1), 0, y - size.cell / 2);
@@ -669,7 +653,7 @@ export default class Game {
     }
     render(): void {
         const { ctx } = this;
-        const { color, size } = c;
+        const { color, size } = config;
         const {
             innerSize: [width, height],
         } = this.state;

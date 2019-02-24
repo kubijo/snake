@@ -7,9 +7,13 @@ export type Seconds = number;
 export type Length = number;
 export type X = number;
 export type Y = number;
-export type Point = [X, Y];
+export type Width = number;
+export type Height = number;
 
 // Generic composits
+export type Point = [X, Y];
+export type GridSize = [Length, Length];
+export type Dimensions = [Width, Height];
 export type Box = {|
     top: number,
     right: number,
@@ -60,3 +64,23 @@ export type MenuEntry = {|
     handle: () => void,
     label: string,
 |};
+
+// Snake
+export interface SnakeInterface {
+    constructor(GridSize, offset?: Point, wrap?: boolean): void;
+    init(GridSize, offset?: Point, wrap?: boolean): void;
+
+    turn(direction: Direction | DirectionRelative): void;
+    step(): void;
+    eat(size?: number): void;
+    liesOnPoint(Point): boolean;
+
+    +head: Point;
+    +tail: Point;
+    +isDead: boolean;
+    +direction: Direction;
+    +tailDirection: ?Direction;
+
+    +length: number;
+    forEach(fn: (point: Point, index: number, path: Point[]) => void): void;
+}
