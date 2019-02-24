@@ -43,6 +43,17 @@ function getInitialPath(offset?: Point, gridSize: Length[]): Point[] {
     // Shift the default value
     return [[0, 0], [1, 0], [2, 0], [3, 0]].map(p => [p[0] + off[0], p[1] + off[1]]);
 }
+function move(head: Point, direction: Direction): Point {
+    const [x, y] = head;
+    const newHead: Point = [x, y];
+
+    if (direction === UP) newHead[1] -= 1;
+    if (direction === DOWN) newHead[1] += 1;
+    if (direction === LEFT) newHead[0] -= 1;
+    if (direction === RIGHT) newHead[0] += 1;
+
+    return newHead;
+}
 
 export default class Snake {
     gridSize: [X, Y];
@@ -64,27 +75,16 @@ export default class Snake {
 
     turn(dir: Direction | DirectionRelative): mixed {
         const d = dir === NEGATIVE || dir === POSITIVE ? relative2absolute[this.direction][dir] : dir;
+        const [neck, head] = this.path.slice(-2);
 
         // Abort when trying to dow 180° in place
-        if (
-            (d === UP && this.direction === DOWN) ||
-            (d === DOWN && this.direction === UP) ||
-            (d === RIGHT && this.direction === LEFT) ||
-            (d === LEFT && this.direction === RIGHT)
-        )
-            return;
+        if (String(move(head, d)) === String(neck)) return console.info('Stopped an attempt at 180° turn');
 
         this.direction = d;
     }
     step(): void {
-        const { path, direction } = this;
-        const [x, y] = path[path.length - 1];
-        const newHead: Point = [x, y];
-
-        if (direction === UP) newHead[1] -= 1;
-        if (direction === DOWN) newHead[1] += 1;
-        if (direction === LEFT) newHead[0] -= 1;
-        if (direction === RIGHT) newHead[0] += 1;
+        const { path } = this;
+        const newHead: Point = move(this.head, this.direction);
 
         let lead;
         if (this.eatBuffer > 0) {
