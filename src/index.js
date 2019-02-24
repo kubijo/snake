@@ -1,6 +1,6 @@
 // @flow
 
-import Snake from './snake';
+import Game from './Game';
 
 const n = document.createElement('div');
 n.style.cssText = `
@@ -19,8 +19,8 @@ n.style.cssText = `
     color:white;
 `;
 
-const b = document.body;
-if (b) {
-    b.appendChild(n);
-    new Snake(n);
-}
+window.document.body.style.padding = 0;
+window.document.body.style.margin = 0;
+window.document.body.appendChild(n);
+
+console.log(new Game(n));
