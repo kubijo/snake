@@ -7,7 +7,7 @@
   "license": "wtfpl",
   "private": true,
   "dependencies": {
-    "d3-scale": "^3.2.1",
+    "d3-scale": "^3.3.0",
     "invariant": "^2.2.4",
     "lodash": "^4.17.19"
   },
